@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherWizard</title>
+    <link rel="icon" type="image/x-icon" href="favicon_io/favicon.ico">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f39c12;
+            --background-color: #f0f4f8;
+            --text-color: #2c3e50;
+            --card-color: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.dark-mode {
+            --background-color: #1a1a1a;
+            --text-color: #f0f4f8;
+            --card-color: #2c2c2c;
+            --shadow: 0 4px 6px rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+
+        .search-form {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px 0 0 25px;
+            width: 300px;
+        }
+
+        .search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 25px 25px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .search-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .current-weather {
+            background: linear-gradient(135deg, #6dd5fa, #2980b9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .weather-details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .detailed-stats {
+            background-color: var(--card-color);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background-color: rgba(74, 144, 226, 0.1);
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .loading, .error {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        .mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .mode-toggle:hover {
+            background-color: var(--secondary-color);
+        }
+
+        footer {
+            background-color: var(--card-color);
+            color: var(--text-color);
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WeatherWizard ✨</h1>   <!--https://emojipedia.org/-->
+        </header>
+
+        <form class="search-form" role="search" id="search-form">
+            <input type="text" id="city-search" class="search-input" placeholder="Enter city name" aria-label="City name">
+            <button type="submit" class="search-button">Search</button>
+        </form>
+
+        <div id="weather-container"></div>
+    </div>
+
+    <button class="mode-toggle" aria-label="Toggle dark mode">🌓</button> <!--https://emojipedia.org/-->
+
+    <script>
+        const API_KEY = 'q7oEiYGQ4IP35RxCpaOHf7eFGKkEQ5Vu';
+        const weatherContainer = document.getElementById('weather-container');
+        const searchForm = document.getElementById('search-form');
+        const cityInput = document.getElementById('city-search');
+
+        // Dark mode toggle
+        const body = document.body;
+        const modeToggle = document.querySelector('.mode-toggle');
+
+        modeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+        });
+
+        async function fetchWeatherData(city) {
+            const url = `https://api.tomorrow.io/v4/weather/realtime?location=${city}&apikey=${API_KEY}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('City not found');
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        }
+
+        function displayWeatherData(data) {
+            const location = data.location.name;
+            const temperature = data.data.values.temperature;
+            const humidity = data.data.values.humidity;
+            const windSpeed = data.data.values.windSpeed;
+            const pressure = data.data.values.pressureSurfaceLevel;
+
+            const weatherHtml = `
+                <section class="current-weather" aria-labelledby="current-weather-heading">
+                    <div class="weather-header">
+                        <h2 id="current-weather-heading" class="location">${location}</h2>
+                        <div class="temperature" aria-label="Current temperature">${temperature}°C</div>
+                    </div>
+                    <div class="weather-details">   
+                        <div class="weather-detail">
+                            <h3>Wind</h3>
+                            <p>${windSpeed} m/s</p>
+                        </div>
+                        <div class="weather-detail">
+                            <h3>Humidity</h3>
+                            <p>${humidity}%</p>
+                        </div>
+                        <div class="weather-detail">
+                            <h3>Pressure</h3>
+                            <p>${pressure} hPa</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="detailed-stats" aria-labelledby="detailed-stats-heading">
+                    <h2 id="detailed-stats-heading">Detailed Weather Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h3>UV Index</h3>
+                            <p>${data.data.values.uvIndex}</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>Cloud Cover</h3>
+                            <p>${data.data.values.cloudCover}%</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>Visibility</h3>
+                            <p>${data.data.values.visibility} km</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>Precipitation</h3>
+                            <p>${data.data.values.precipitationProbability}%</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>Humidity</h3>
+                            <p>${data.data.values.humidity}%</p>
+                        </div>                     
+                    </div>
+                </section>
+            `;
+
+            weatherContainer.innerHTML = weatherHtml;
+        }
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const city = cityInput.value.trim();
+            if (city) {
+                weatherContainer.innerHTML = '<div class="loading">Loading weather data...</div>';
+                try {
+                    const weatherData = await fetchWeatherData(city);
+                    displayWeatherData(weatherData);
+                } catch (error) {
+                    weatherContainer.innerHTML = '<div class="error">City not found. Please try again.</div>';
+                }
+            }
+        });
+
+        fetchWeatherData('Jalandhar').then(displayWeatherData).catch(console.error);
+    </script>
+
+    <footer>
+        <p>&copy; 2024 WeatherWizard. All rights reserved.</p>
+        <p>
+            <a href="#">Privacy Policy</a> | 
+            <a href="#">Terms of Service</a> | 
+            <a href="#">Contact Us</a>
+        </p>
+    </footer>
+</body>
+</html>
